@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>2</title>
+<title>4-reroute-pathbearing</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 <style>
@@ -168,7 +167,7 @@ border:none;border-radius:1vh;padding:0.4vh 5vw;font-weight:bold;cursor:pointer;
 /* === ROUTE PANEL === */
 #routePanel {
   position: fixed;
-  bottom: 9vh; /* lifted above bottom UI elements */
+  bottom: 8vh; /* lifted above bottom UI elements */
   left: 2vw;
   width: 270px;
   max-height: 32vh; /* more height and scrollable */
@@ -530,65 +529,7 @@ align-items:center;color:#fff;font-size:0.9rem;}
   display: flex;
   align-items: center;
 }
-/* === GOOGLE MAPS STYLE SMART ARROWS === */
-.gm-road-arrow {
-  width: 24px;
-  height: 24px;
-  background: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  transform-origin: center center;
-  z-index: 500;
-  transform-origin: center center !important;
-  will-change: transform;
-  filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.4));
-  transition: transform 0.2s ease-out; /* Smooths out the arrow transition */
-}
-.gm-road-arrow-container {
-    border: none !important;
-    background: none !important;
-    pointer-events: none;
-}
-.leaflet-rotate-pane .gm-road-arrow {
-    transform: none !important;
-}
 
-.gm-arrow-icon {
-  width: 16px;
-  height: 16px;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-}
-
-/* --- SMART ARROW TYPES (SVGs) --- */
-/* Straight */
-.gm-arrow-straight {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z'/%3E%3C/svg%3E");
-}
-/* Slight Left (Curve) */
-.gm-arrow-slight-left {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' transform='rotate(45 12 12)'/%3E%3C/svg%3E");
-}
-/* Slight Right (Curve) */
-.gm-arrow-slight-right {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' transform='rotate(-45 12 12)'/%3E%3C/svg%3E");
-}
-/* Sharp Left (Turn) */
-.gm-arrow-left {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M14 7l-5 5 5 5V7z'/%3E%3C/svg%3E");
-}
-/* Sharp Right (Turn) */
-.gm-arrow-right {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M10 17l5-5-5-5v10z'/%3E%3C/svg%3E");
-}
-/* U-Turn */
-.gm-arrow-uturn {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V6.41l1.29 1.29c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41L9.71 2.29c-.39-.39-1.02-.39-1.41 0L4.29 6.29c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L7 6.41V18H6z' transform='rotate(180 12 12)'/%3E%3C/svg%3E");
-}
 
 </style>
 </head>
@@ -724,6 +665,7 @@ align-items:center;color:#fff;font-size:0.9rem;}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.js"></script>
 <script src="leaflet-rotate-src.js"></script>
+<script src="leaflet.polylineDecorator.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 <script>
 
@@ -740,6 +682,9 @@ const map = L.map('map', {
     rotateControl: true,
     inertia: true
 });
+// 🔝 Dedicated pane so route line never hides
+map.createPane("routePane");
+map.getPane("routePane").style.zIndex = 450;
 
 let autoCenter = true;
 const nightMap = L.tileLayer(
@@ -817,7 +762,6 @@ let compassMode = 0;
 // GLOBAL API LOAD CONTROLLER
 // Prevent too many API calls
 // ==========================
-let suppressOffRouteCheckUntil = 0;
 let activeRequests = 0;
 const MAX_REQUESTS = 6;     // safe limit
 const REQUEST_DELAY = 120;  // ms delay between API queues
@@ -827,6 +771,10 @@ const REROUTE_COOLDOWN = 15000; // 15 seconds
 const requestQueue = [];
 let isProcessingQueue = false;
 let __searchSeq = 0;   // 🔒 hard cancel token
+// 🔒 Track all arrow decorators for rotation cancel
+const STATIC_ROUTE_DECORATORS = [];
+let lockRouteNorthUp = true;   // ⬅️ NEW
+
 
 async function safeFetch(url, retries = 2) {
     return new Promise((resolve, reject) => {
@@ -979,6 +927,8 @@ const OSRM_ROUTER = L.Routing.osrmv1({
   timeout: 15000,  // 15 second timeout
   profile: 'driving'
 });
+// 🔒 Protect main route polylines from fade/removal
+const MAIN_ROUTE_LINES = new Set();
 
 // ✅ CRITICAL: Override the buildRouteUrl method to fix the /undefined/ bug
 OSRM_ROUTER.buildRouteUrl = function(waypoints, options) {
@@ -1134,27 +1084,28 @@ function ecoAdvisor(distAhead, slope){
 }
 // ===== Elevation Fix + Directional Arrows + Turn Signals =====
 async function getElevations(coords) {
-  try {
-    const chunkSize = 50;
-    let elevations = [];
+    try {
+        const chunkSize = 40;
+        let all = [];
 
-    for (let i = 0; i < coords.length; i += chunkSize) {
-      const batch = coords.slice(i, i + chunkSize)
-          .map(c => `${c.lat},${c.lng}`).join("|");
+        for (let i = 0; i < coords.length; i += chunkSize) {
+            const chunk = coords.slice(i, i + chunkSize);
+            const list = chunk.map(c => `${c.lat},${c.lng}`).join("|");
+            const url = `https://api.open-elevation.com/api/v1/lookup?locations=${list}`;
 
-      const url = `https://api.open-elevation.com/api/v1/lookup?locations=${batch}`;
-      const r = await fetch(url).then(x => x.json());
+            const res = await fetch(url);
+            const data = await res.json();
 
-      elevations.push(...r.results.map(v => v.elevation ?? 0));
+            all.push(...data.results.map(r => r.elevation ?? 0));
+        }
+
+        return all;
+    } catch (e) {
+        console.warn("Elevation error:", e);
+        return new Array(coords.length).fill(0);
     }
-
-    return elevations; // <-- 🔥 THIS WAS MISSING
-
-  } catch (e) {
-    console.warn("Elevation error:", e);
-    return new Array(coords.length).fill(0);
-  }
 }
+
 
 const ELEVATION_INTERVAL = 50;
 const LOOKAHEAD_DISTANCE = 200;
@@ -1178,6 +1129,18 @@ function slopeBucket(slope){
   if (slope < -2.5) return "uphill";
   return "flat";
 }
+// ===============================
+// 🧠 IDLE AUTO-RECENTER SYSTEM
+// ===============================
+const IDLE_RECENTER_DELAY = 5000; // 5 seconds
+let lastDashboardInteraction = Date.now();
+
+// ===============================
+// AUTO RETURN TO NORTH-UP
+// ===============================
+const AUTO_NORTHUP_DELAY = 5000; // 5 seconds
+let lastMapInteraction = Date.now();
+
 // ==========================================================
 // VIRTUAL GPS — USED WHEN USER REFUSES GPS PERMISSION
 // ==========================================================
@@ -1201,26 +1164,72 @@ let userHasTouchedMap = false;
 let lastHeading = 0;
 
 map.on("movestart", (e) => {
-    // only cancel auto-follow if the user moved the map — not system
     if (e.originalEvent) {
         follow = false;
         autoCenter = false;
-        autoRotation = false;
         userHasTouchedMap = true;
+
+        // ⛔ do NOT kill route-up mode
+        if (compassMode === 0) autoRotation = false;
     }
 });
-map.on("dragstart", () => {
-    follow = false;
-    autoCenter = false;
-    autoRotation = false;
-    userHasTouchedMap = true;
+
+["dragstart", "zoomstart", "rotatestart", "mousedown", "touchstart"].forEach(evt => {
+    map.on(evt, () => {
+        lastDashboardInteraction = Date.now();
+        follow = false;
+        autoCenter = false;
+        userHasTouchedMap = true;
+    });
 });
 
-// Resume rotation after 2s if user stops interacting
-// 🆕 Resume follow ONLY if 1 minute passes without interaction
-map.on("dragend zoomend rotateend", () => {
-    lastUserInteraction = Date.now();
-});
+
+// ============================================
+// 🚗 AUTO RECENTER CAR AFTER IDLE
+// ============================================
+setInterval(() => {
+    if (!userMarker) return;
+
+    const idleTime = Date.now() - lastDashboardInteraction;
+
+    // Still interacting → do nothing
+    if (idleTime < IDLE_RECENTER_DELAY) return;
+
+    // Already centered → skip
+    if (follow && autoCenter && !userHasTouchedMap) return;
+
+    // 🔥 FORCE RECENTER
+    follow = true;
+    autoCenter = true;
+    userHasTouchedMap = false;
+
+    map.flyTo(
+        userMarker.getLatLng(),
+        map.getZoom(),
+        { animate: true, duration: 0.8 }
+    );
+
+}, 800);
+
+
+
+// ============================================
+// 🔒 FORCE RECENTER + ZOOM (SAFE, CENTRALIZED)
+// ============================================
+function forceRecenterToCar(zoomLevel = 18) {
+    if (!userMarker) return;
+
+    userHasTouchedMap = false;
+    follow = true;
+    autoCenter = true;
+
+    map.flyTo(
+        userMarker.getLatLng(),
+        zoomLevel,
+        { animate: true, duration: 0.8 }
+    );
+}
+
 // Modify GPS watcher to detect permission denial
 if (navigator.geolocation){
   navigator.geolocation.watchPosition(async pos=>{
@@ -1230,29 +1239,30 @@ if (navigator.geolocation){
     const currentSpeed = calculateGPSSpeed(latlng);
     let heading = pos.coords.heading;
 
+    // 🔒 Prevent car heading from affecting map rotation
     const MIN_SPEED_FOR_HEADING = 5/3.6;
     if (heading == null || currentSpeed < MIN_SPEED_FOR_HEADING) {
       heading = lastHeading || 0;
     }
     lastHeading = heading;
-
     if(!userMarker){
       userMarker = L.marker(latlng,{icon:carIcon}).addTo(map);
       map.setView(latlng, 19);
     } else {
       userMarker.setLatLng(latlng);
     }
-
-    // 🆕 Only follow when follow mode is active
+    // 🔥 TRIGGER ROTATION UPDATE HERE
+    if (autoRotation && activeRouteIndex !== null) {
+        rotateTowardRoute();
+    }
     // Only center if user did NOT interact manually
     if (follow && autoCenter) {
-        if (!userHasTouchedMap) {
-            map.setView(latlng, map.getZoom(), { animate: true });
-        }
+        map.setView(latlng, map.getZoom(), { animate: true });
     }
 
     await adaptiveAIDashboard(latlng, heading);
     smartStepAdvancement(latlng);
+    rotateTowardRouteLive(latlng);
     checkUpcomingSteps(latlng);
     maybeRepeatCurrentStep();
     // ===============================
@@ -1260,66 +1270,120 @@ if (navigator.geolocation){
     // ==============================
   }, console.warn, { enableHighAccuracy:true, maximumAge:1000, timeout:5000 });
 }
-const compassBtn = document.getElementById("compass-btn");
 
-compassBtn.onclick = () => {
-  suppressOffRouteCheckUntil = Date.now() + 2000;
-    compassMode = (compassMode + 1) % 2;
+// ==========================================
+// 🚀 NEW: CALCULATE BEARING 10m AHEAD ON PATH
+// ==========================================
+function getPathBearing(latlng, route) {
+    if (!route || !route.coordinates || route.coordinates.length < 2) return 0;
 
-    if (compassMode === 0) {
-        autoRotation = false;
-        follow = true;
-        autoCenter = true;
-        map.setBearing(0, { animate: true });
-        compassBtn.style.background = "#ff1212";
-        compassBtn.innerHTML = "⬆️";
-    } else {
-        autoRotation = true;
-        follow = true;
-        autoCenter = true;
-        rotateTowardRoute();
-        compassBtn.style.background = "#00b36b";
-        compassBtn.innerHTML = "🧭";
+    const coords = route.coordinates;
+    let closestDist = Infinity;
+    let closestIdx = route.lastClosestIndex || 0;
+
+    // optimization: only search forward from last known spot
+    // limit search window to next 50 points to save CPU
+    const searchLimit = Math.min(closestIdx + 50, coords.length);
+    
+    for (let i = closestIdx; i < searchLimit; i++) {
+        const d = map.distance(latlng, coords[i]);
+        if (d < closestDist) {
+            closestDist = d;
+            closestIdx = i;
+        }
     }
-};
+    
+    // Save index for next frame
+    route.lastClosestIndex = closestIdx;
 
-// keep map centered automatically if follow mode is ON
-setInterval(() => {
-    if (follow && autoCenter && userMarker && !userHasTouchedMap) {
-        map.panTo(userMarker.getLatLng(), { animate: true });
+    // Look ahead ~15 meters (approx 2-3 coordinate points usually)
+    // We accumulate distance to be precise
+    let lookAheadIdx = closestIdx;
+    let distAccum = 0;
+    
+    while (lookAheadIdx < coords.length - 1 && distAccum < 15) {
+        distAccum += map.distance(coords[lookAheadIdx], coords[lookAheadIdx + 1]);
+        lookAheadIdx++;
     }
-}, 4000);
 
+    // If we are at the very end, just use the last segment angle
+    if (lookAheadIdx === closestIdx && closestIdx < coords.length - 1) {
+        lookAheadIdx = closestIdx + 1;
+    }
+
+    const p1 = coords[closestIdx];
+    const p2 = coords[lookAheadIdx];
+
+    // Calculate Bearing
+    const angle = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
+    return (angle + 360) % 360;
+}
 // ===============================
-// FIXED: ROTATION LOGIC (Faces Path Upwards)
+// ROUTE-UP ROTATION (EXTRACTED)
 // ===============================
 function rotateTowardRoute() {
-    // Basic checks to ensure we have a valid route
+    if (!autoRotation) return;
     if (!routes.length || activeRouteIndex === null) return;
+    // 1. Get the target angle based on the path 10-15m ahead
+    const userLoc = userMarker ? userMarker.getLatLng() : map.getCenter();
+    const targetBearing = getPathBearing(userLoc, routes[activeRouteIndex]);
     const route = routes[activeRouteIndex];
-    if (!route.steps) return;
+    if (!route.steps || route.steps.length < 2) return;
 
     let p1, p2;
 
-    // CASE 1: Normal Driving (Align P1 -> P2)
+    // current step → next step
     if (route.steps[currentStepIndex + 1]) {
         p1 = route.steps[currentStepIndex];
         p2 = route.steps[currentStepIndex + 1];
-    } 
-    // CASE 2: Arriving at Destination (Keep alignment of the final approach)
+    }
+    // fallback for last step
     else if (currentStepIndex > 0) {
         p1 = route.steps[currentStepIndex - 1];
         p2 = route.steps[currentStepIndex];
     } else {
-        return; // Should not happen
+        return;
     }
 
-    // Calculate the bearing of the road segment
-    const angle = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
+    const angle =
+        Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat) * 180 / Math.PI;
 
-    // Rotate the map so this angle faces "Up" (Top of phone)
-    map.setBearing((angle + 360) % 360, { animate: true, duration: 800 });
+    map.setBearing(targetBearing,(angle + 360) % 360, {
+        animate: true,
+        duration: 0.5, // Quick, smooth updates
+        easeLinearity: 0.2
+    });
 }
+const compassBtn = document.getElementById("compass-btn");
+compassBtn.onclick = () => {
+    compassMode = (compassMode + 1) % 2;
+
+    // MODE 0 → NORTH UP ONLY
+    if (compassMode === 0) {
+        if (compassMode === 0) autoRotation = false;
+        lockRouteNorthUp = true;   // ✅ ADD THIS
+        follow = true;
+        autoCenter = true;
+
+        map.setBearing(0, { animate: true, duration: 600 });
+        compassBtn.innerHTML = "⬆️";
+        compassBtn.style.background = "#ff1212";
+    }
+
+    // MODE 1 → ROUTE-UP (NOT ICON-UP)
+    else {
+        autoRotation = true;
+        lockRouteNorthUp = false;
+        follow = true;
+        autoCenter = true;
+
+        userHasTouchedMap = false; // 🔥 important
+        requestAnimationFrame(() => rotateTowardRoute());
+
+        compassBtn.innerHTML = "🧭";
+        compassBtn.style.background = "#00b36b";
+    }
+};
 
 // === Speed Limit (Overpass API - Real Data Only) ===
 let lastSpeedLimit = null;
@@ -1468,39 +1532,6 @@ function findCurrentStepByLocation(latlng, route) {
   
   return closestStepIndex >= 0 ? { index: closestStepIndex, distance: closestDistance } : null;
 }
-// ===============================
-// STEP LINE FADE / ERASE ANIMATION
-// ===============================
-function fadeOutStepLine(line, duration = 700) {
-    if (!line) return;
-
-    const start = performance.now();
-    const initialOpacity = line.options.opacity ?? 0.8;
-    const initialWeight = line.options.weight ?? 5;
-
-    function animate(now) {
-        const progress = Math.min((now - start) / duration, 1);
-
-        const newOpacity = initialOpacity * (1 - progress);
-        const newWeight = Math.max(1, initialWeight * (1 - progress));
-
-        line.setStyle({
-            opacity: newOpacity,
-            weight: newWeight
-        });
-
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            // fully remove after fade
-            try {
-                line.remove();
-            } catch {}
-        }
-    }
-
-    requestAnimationFrame(animate);
-}
 
 // 🆕 SMART STEP ADVANCEMENT
 // Handles skipping missed steps and announcing current location
@@ -1522,6 +1553,11 @@ function smartStepAdvancement(latlng) {
             fadeOutStepLine(steps[i].lineLayer);
             steps[i].lineLayer = null; // prevent double removal
         }     
+        if (steps[i].arrowLayer) {
+            try { steps[i].arrowLayer.remove(); } catch {}
+            steps[i].arrowLayer = null;
+        }
+
         if (steps[i].connectorLine) {
             fadeOutStepLine(steps[i].connectorLine, 400);
             steps[i].connectorLine = null;
@@ -1529,15 +1565,13 @@ function smartStepAdvancement(latlng) {
     }   
     // Update current step
     currentStepIndex = newStepIndex;
-    // ✅ FORCE ROUTE TO FACE UP AFTER STEP CHANGE
-    if (autoRotation) {
-        requestAnimationFrame(() => rotateTowardRoute());
-    }
     announcedSteps.clear(); // Reset announcements 
-    // 3. 🔥 NEW: Force Map to Rotate Upwards for the New Step
+    // 🔥 FORCE PATH TO FACE UP ON STEP CHANGE
     if (autoRotation) {
-        rotateTowardRoute();
+        ROUTE_CONTROLS_ROTATION = true;   // 🔒 force route authority
+        map.stop();                      // 🧹 clear inertial bearing
     }
+
     // If this is the last step (destination)
     if (currentStepIndex >= steps.length - 1) {
       updateStepUI(activeRouteIndex, currentStepIndex, 'completed');
@@ -1584,13 +1618,19 @@ function checkUpcomingSteps(latlng) {
 }
 
 function cleanupRoute(route) {
-  try { map.removeControl(route.rc); } catch {}
   try { map.removeLayer(route.group); } catch {}
   const destIndex = waypointMarkers.length - 1;
   if (waypointMarkers[destIndex]) {
     map.removeLayer(waypointMarkers[destIndex]);
     waypointMarkers.splice(destIndex, 1);
     waypoints.splice(destIndex + 1, 1);
+  }
+  if (route.mainLine) {
+      try { route.mainLine.remove(); } catch {}
+      route.mainLine = null;
+  }
+  if (route.mainLine) {
+      MAIN_ROUTE_LINES.delete(route.mainLine);
   }
   const box = document.getElementById(`route-box-${route.routeIndex}`);
   if (box) box.remove();
@@ -1737,46 +1777,7 @@ function triggerReroute(currentLL, route) {
 
     safeReroute(route, currentLL, destLL); 
 }
-function addGoogleStyleRoadArrows(coords, group) {
-    if (!coords || coords.length < 2) return;
-    
-    // We clear existing arrows before adding new ones
-    group.clearLayers();
 
-    // Distance between arrows (approx every 15-20 points to avoid clutter)
-    const step = 15; 
-    
-    for (let i = 0; i < coords.length - 1; i += step) {
-        const p1 = coords[i];
-        const p2 = coords[i + 1];
-        
-        // Calculate the bearing of the road segment
-        const bearing = L.GeometryUtil.bearing(p1, p2);
-        
-        // Use a DivIcon with a specific class 'ignore-map-rotation'
-        const arrowIcon = L.divIcon({
-            className: 'gm-road-arrow-container',
-            html: `
-                <div class="gm-road-arrow" style="transform: rotate(${bearing}deg);">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="white" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
-                    </svg>
-                </div>
-            `,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-        });
-
-        const marker = L.marker(p1, { 
-            icon: arrowIcon,
-            interactive: false,
-            // This is the key for the leaflet-rotate plugin:
-            rotationAngle: bearing 
-        });
-        
-        group.addLayer(marker);
-    }
-}
 // ===== Main AI loop =====
 async function adaptiveAIDashboard(latlng, heading) {
   const currentSpeed = calculateGPSSpeed(latlng);
@@ -1806,14 +1807,9 @@ async function adaptiveAIDashboard(latlng, heading) {
         // 1. Calculate distance from the "purple line"
         /*** 🚨 AUTO REROUTE ENGINE FIX 🚨 ***/
         const offDist = getNearestRouteDistance(latlng, route);
-        const isMoving = currentSpeed > 5; // km/h threshold
-        // Add cooldown tracking at top of file with other globals
-        let lastRerouteTime = 0;
-        const REROUTE_COOLDOWN = 15000; // 15 seconds minimum between reroutes
-
+        const isMoving = currentSpeed > 15; 
         // Reroute Condition
-        // Reroute Condition
-        if (offDist > 75 && isMoving && !route._isRerouting && Date.now() > suppressOffRouteCheckUntil) {
+        if (offDist > 25 && isMoving && !route._isRerouting) {
             const now = Date.now();
             
             // ✅ Prevent spam rerouting
@@ -1889,7 +1885,6 @@ function animateMarker(timestamp) {
 setInterval(() => {
     if (!userMarker || useVirtualGPS) return;
     // Prevent snapping map every loop when user is interacting
-    if (userHasTouchedMap) return;
     const latlng = userMarker.getLatLng();
     adaptiveAIDashboard(latlng, lastHeading);
 }, 900);
@@ -1902,6 +1897,7 @@ async function updateDriverCountry(latlng) {
     driverCountry = data.address && (data.address.country_code || "").toUpperCase();
   } catch (err) { console.warn("Country fetch failed:", err); }
 }
+
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
@@ -1979,16 +1975,17 @@ async function safeReroute(route, currentLL) {
     speak("Recalculating route.", "warning", { interrupt: true });
 
     // 1️⃣ Get destination (last step)
+    if (!route || !route.steps?.length) return;
     const lastStep = route.steps[route.steps.length - 1];
     const destLL = L.latLng(lastStep.lat, lastStep.lng);
 
-    // 2️⃣ Remove only the OLD line + step layers
-    try { map.removeControl(route.rc); } catch {}
-    try { route.group.clearLayers();} catch {}
+    // 🔒 KEEP OLD ROUTE REFERENCES (DO NOT REMOVE YET)
+    const oldGroup = route.group;
+    const oldRc = route.rc;
+    const oldMainLine = route.mainLine;
 
-    // 3️⃣ Create NEW group for rerouted line
+    // 🆕 Create new group (do NOT assign to route yet)
     const newGroup = L.layerGroup().addTo(map);
-    route.group = newGroup; // replace only this route’s group
 
     // 4️⃣ Generate new route using OSRM
     OSRM_ROUTER.route(
@@ -1996,31 +1993,55 @@ async function safeReroute(route, currentLL) {
         async (err, result) => {
             if (err || !result || !result[0]) {
                 console.warn("Rerouting failed", err);
+                try { map.removeLayer(newGroup); } catch {}
                 return;
             }
 
             const r = result[0];
 
-            // 5️⃣ Replace route.rc with new control
-            route.rc = L.Routing.control({
-                router: OSRM_ROUTER,
-                waypoints: [currentLL, destLL],
-                show: false,
-                addWaypoints: false,
-                createMarker: () => null,
-                lineOptions: {
-                    styles: [{
-                        color: route.color,
-                        weight: 5,
-                        opacity: 0.9
-                    }]
+            // ===============================
+            // 🔥 MAIN REROUTE POLYLINE
+            // ===============================
+            const coords = r.coordinates.map(c => ({
+                lat: c.lat,
+                lng: c.lng
+            }));
+
+            const mainRouteLine = L.polyline(
+                coords.map(c => [c.lat, c.lng]),
+                {
+                    pane: "routePane",
+                    color: route.color,
+                    weight: 7,
+                    opacity: 1,
+                    dashArray: null,
+                    lineCap: "round",
+                    lineJoin: "round"
                 }
-            }).addTo(map);
+            ).addTo(newGroup);
+            MAIN_ROUTE_LINES.add(mainRouteLine);
 
-            document.querySelectorAll(".leaflet-routing-container")
-                .forEach(x => x.style.display = "none");
+            // ===============================
+            // ✅ SAFE SWAP (SIR'S FIX)
+            // ===============================
+            try { if (oldRc) map.removeControl(oldRc); } catch {}
+            try { if (oldGroup) map.removeLayer(oldGroup); } catch {}
+            if (oldMainLine) MAIN_ROUTE_LINES.delete(oldMainLine);
 
-            // 6️⃣ Build steps again into SAME box
+            route.group = newGroup;
+            route.rc = null;
+            route.mainLine = mainRouteLine;
+            route.coordinates = coords;     // 🔥 CRITICAL
+            route.lastClosestIndex = 0;
+
+            // 🆕 Force recenter + rotation
+            setTimeout(() => forceRecenterToCar(19), 300);
+            autoRotation = true;
+            requestAnimationFrame(() => rotateTowardRoute());
+
+            // ===============================
+            // 6️⃣ Rebuild steps UI + layers
+            // ===============================
             const content = document.querySelector(
                 `#route-box-${routeIndex} .route-content`
             );
@@ -2031,15 +2052,7 @@ async function safeReroute(route, currentLL) {
             content.innerHTML = "";
             route.steps = [];
 
-            const coords = r.coordinates.map(c => ({
-                lat: c.lat,
-                lng: c.lng
-            }));
-            // 🧭 rebuild Google-style road arrows after reroute
-            route.roadArrows = addGoogleStyleRoadArrows(coords, newGroup);
-
-            // elevation
-            const elevs = new Array(coords.length).fill(0);
+            const elevs = await getElevations(coords);
 
             r.instructions.forEach((s, i) => {
                 const idxStart = s.index;
@@ -2055,10 +2068,15 @@ async function safeReroute(route, currentLL) {
                 const elev = elevs[idxStart] || 0;
 
                 const stepLine = L.polyline(seg, {
+                    pane: "overlayPane",
                     color: route.color,
-                    weight: 5,
-                    opacity: 0.8
+                    weight: 4,
+                    opacity: 0.6,
+                    dashArray: "8 6"
                 }).addTo(newGroup);
+
+                const stepArrow = addPolylineArrows(stepLine, newGroup);
+                if (stepArrow) STATIC_ROUTE_DECORATORS.push(stepArrow);
 
                 const item = document.createElement("div");
                 item.className = "route-step";
@@ -2076,20 +2094,21 @@ async function safeReroute(route, currentLL) {
                     element: item,
                     distance: s.distance,
                     lineLayer: stepLine,
+                    arrowLayer: stepArrow,
                     translated: false
                 });
             });
 
-            // 7️⃣ Reset state only for this route
+            // 7️⃣ Reset state
             activeRouteIndex = routeIndex;
             currentStepIndex = 0;
             announcedSteps.clear();
 
-            // 8️⃣ Update distance display
+            // 8️⃣ Distance display
             distanceEl.textContent =
                 `${(r.summary.totalDistance / 1000).toFixed(1)} km remaining`;
 
-            // 9️⃣ Announce first step again
+            // 9️⃣ Announce first step
             if (route.steps[0]) {
                 speak(route.steps[0].text, "step", { interrupt: true });
             }
@@ -2104,97 +2123,36 @@ function triggerReroute(currentLL, route) {
     safeReroute(route, currentLL);
 }
 // ===============================
-// GOOGLE MAPS STYLE ARROW ENGINE (SMART TURNS)
+// POLYLINE DECORATOR ARROWS (IMPROVED)
 // ===============================
+function addPolylineArrows(polyline, group) {
+    if (!polyline || !group) return null;
 
-// 1. Calculate bearing between two points
-function roadBearing(lat1, lng1, lat2, lng2) {
-    const y = Math.sin(lng2 - lng1) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) -
-              Math.sin(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1);
-    const brng = Math.atan2(y, x);
-    return (brng * 180 / Math.PI + 360) % 360; 
-}
-
-// 2. Normalize angle difference to -180 to +180
-function normalizeAngle(angle) {
-    while (angle <= -180) angle += 360;
-    while (angle > 180) angle -= 360;
-    return angle;
-}
-
-// 3. Main Arrow Engine
-function addGoogleStyleRoadArrows(coords, group) {
-    const arrows = [];
-    const ARROW_SPACING = 60; // Slightly closer for better turn visibility
-    let distAccumulator = ARROW_SPACING; 
-
-    // Helper to get radian coords
-    const toRad = (d) => d * Math.PI / 180;
-
-    for (let i = 0; i < coords.length - 1; i++) {
-        const p1 = L.latLng(coords[i]);
-        const p2 = L.latLng(coords[i+1]);
-        
-        const segmentDist = p1.distanceTo(p2);
-        distAccumulator += segmentDist;
-
-        if (distAccumulator >= ARROW_SPACING) {
-            
-            // A. Base Bearing (Current Segment)
-            const lat1 = toRad(p1.lat), lng1 = toRad(p1.lng);
-            const lat2 = toRad(p2.lat), lng2 = toRad(p2.lng);
-            const baseBearing = roadBearing(lat1, lng1, lat2, lng2);
-
-            // B. Look Ahead for Turns (Next Segment)
-            let turnAngle = 0;
-            if (i < coords.length - 2) {
-                const p3 = L.latLng(coords[i+2]);
-                const lat3 = toRad(p3.lat), lng3 = toRad(p3.lng);
-                const nextBearing = roadBearing(lat2, lng2, lat3, lng3);
-                turnAngle = normalizeAngle(nextBearing - baseBearing);
-            }
-
-            // C. Determine Icon based on Turn Angle  
-            const arrowClass = getArrowClassByAngle(turnAngle);
-
-            // D. Create Marker
-            const arrow = createGMArrow(p1, baseBearing, arrowClass).addTo(group);
-            
-            arrows.push({
-                marker: arrow,
-                baseBearing: baseBearing
-            });
-
-            distAccumulator = 0; 
-        }
-    }
-    return arrows;
-}
-
-// 4. Smart Icon Selector
-function getArrowClassByAngle(angle) {
-    // Thresholds for turn types
-    return "gm-arrow-straight";                   // Straight
-}
-
-// 5. Create Marker
-function createGMArrow(latlng, bearing, typeClass) {
-    return L.marker(latlng, {
-        interactive: false,
-        icon: L.divIcon({
-            className: "", 
-            // We rotate the container by the road bearing
-            html: `
-              <div class="gm-road-arrow" style="transform: rotate(${bearing}deg);">
-                <div class="gm-arrow-icon ${typeClass}"></div>
-              </div>
-            `,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
-        })
+    const decorator = L.polylineDecorator(polyline, {
+        pane: "markerPane",   // 🔝 always on top
+        patterns: [{
+            offset: 25,
+            repeat: 70,
+            symbol: L.Symbol.arrowHead({
+                pixelSize: 17,      // ⬆️ bigger
+                headAngle: 50,
+                polygon: false,
+                pathOptions: {
+                    stroke: true,
+                    color: "#000000", // 🖤 BLACK
+                    weight: 4.2,      // ⬆️ thicker
+                    opacity: 2,
+                    lineCap: "round",
+                    lineJoin: "round"
+                }
+            })
+        }]
     });
+
+    decorator.addTo(group);
+    return decorator;
 }
+
 // ===== Route creation =====
 async function createRoute(start, end, color, marker = null, index = null) {
   const routeIndex = index !== null ? index : routes.length;
@@ -2259,29 +2217,18 @@ async function createRoute(start, end, color, marker = null, index = null) {
     rebuildRoutes();
     refreshAIBox();
   };
-
-rc.on("routesfound", async e => {
-
+  rc.on("routesfound", async e => {
     if (!e.routes || !e.routes[0]) return;
-
     const r = e.routes[0];
 
     // Reset step system SAFELY
     currentStepIndex = 0;
     announcedSteps.clear();
-    // ✅ Ensure rerouted path faces up
-    if (autoRotation) {
-        setTimeout(() => rotateTowardRoute(), 400);
-    }
 
     // Prepare coordinate list
     const coords = r.coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
-    // 🧭 ADD GOOGLE MAPS STYLE ROAD ARROWS (NO STEP DEPENDENCY)
-    const roadArrows = addGoogleStyleRoadArrows(coords, group);
-
     // Fetch elevations safely
-    const elevs = new Array(coords.length).fill(0);
-
+    const elevs = await getElevations(coords);
     content.innerHTML = "";
     const steps = [];
 
@@ -2308,9 +2255,11 @@ rc.on("routesfound", async e => {
       const stepLine = L.polyline(segmentCoords, {
         color: routeColor,
         weight: 5,
-        opacity: 0.8
+        opacity: 0.8,
+        dashArray: "8 6"
       }).addTo(group);
-
+      const stepArrow = addPolylineArrows(stepLine, group);
+      if (stepArrow) STATIC_ROUTE_DECORATORS.push(stepArrow);
       // 3. Create the HTML Box
       const item = document.createElement("div");
       item.className = "route-step";
@@ -2333,6 +2282,7 @@ rc.on("routesfound", async e => {
         element: item,
         distance: s.distance,
         lineLayer: stepLine,
+        arrowLayer: stepArrow,
         translated: false
       };
       steps.push(stepObj);
@@ -2383,7 +2333,12 @@ rc.on("routesfound", async e => {
       activeRouteIndex = routeIndex;
       currentStepIndex = 0;
       announcedSteps.clear();
-
+      // 🧭 AUTO ROTATE PATH UP (EXACT BEHAVIOR FROM rotating.html)
+      autoRotation = true;
+      follow = true;
+      autoCenter = true;
+      setTimeout(() => rotateTowardRoute(), 600);
+      forceRecenterToCar(18); // 🆕 recenter + zoom when route starts
       // Speak the first step immediately (even if translation is still loading)
       if (steps.length > 0) {
         const firstStep = steps[0];
@@ -2396,27 +2351,35 @@ rc.on("routesfound", async e => {
         updateStepUI(routeIndex, 0, "active");
         announcedSteps.add(0);
       }
-      // 🧭 ⭐ AUTO ROUTE-UP MODE WHEN ROUTE IS READY ⭐
-      autoRotation = true;
-      follow = true;
-      autoCenter = true;
-      setTimeout(() => rotateTowardRoute(), 600);
-      
       // Virtual GPS Trigger
       if (useVirtualGPS && steps.length > 0) {
         updateVirtualGPS(L.latLng(steps[0].lat, steps[0].lng));
       }
     }
 
-    // Update Route Object
+    const routeObj = { rc, group, steps, endKey, routeIndex, totalDistance: r.summary.totalDistance, coordinates: coords,lastClosestIndex: 0};
+
+    // 🔥 REGISTER ROUTE FIRST
     const existing = routes.find(x => x.routeIndex === routeIndex);
-    const routeObj = { rc, group, steps, endKey, routeIndex, totalDistance: r.summary.totalDistance, roadArrows};
-    
     if (existing) {
         Object.assign(existing, routeObj);
     } else {
         routes.push(routeObj);
     }
+
+    // 🔥 NOW activate route & rotate
+    if (activeRouteIndex === null) {
+        activeRouteIndex = routeIndex;
+        currentStepIndex = 0;
+        announcedSteps.clear();
+
+        autoRotation = true;
+        follow = true;
+        autoCenter = true;
+        setTimeout(() => rotateTowardRoute(), 600);
+        forceRecenterToCar(18); // 🆕 recenter + zoom when route starts
+    }
+
 
     document.getElementById(`route-distance-${routeIndex}`).textContent =
       `${(r.summary.totalDistance / 1000).toFixed(1)} km total`;
@@ -2487,15 +2450,12 @@ document.getElementById("map-toggle").addEventListener("click", () => {
 });
 
 document.getElementById("locate-btn").onclick = () => {
-    suppressOffRouteCheckUntil = Date.now() + 2000; // 🛑 block reroute for 2s
     follow = true;
     autoCenter = true;
-    userHasTouchedMap = false;
-    if (userMarker) {
-        map.panTo(userMarker.getLatLng(), { animate:true });
-    }
+    userHasTouchedMap = false; 
+    // NOTE: Do NOT enable autoRotation here.
+    map.flyTo(userMarker.getLatLng(), 19, { animate:true, duration:0.9 });
 };
-
 // ===== Search =====
 const input = document.getElementById("searchInput");
 const suggestBox = document.getElementById("suggestBox");
@@ -3227,6 +3187,7 @@ function selectResult(i) {
     map.flyTo(latlng, 16, { animate: true, duration: 1 });
 
 }
+
 
 const micBtn = document.getElementById('micBtn');
 micBtn.onclick = async () => {
